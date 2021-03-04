@@ -6,13 +6,13 @@ import (
 )
 
 type Options struct {
-	Key    string `json:"key"`
-	Secret string `json:"secret"`
+	Key    string `toml:"key" json:"key"`
+	Secret string `toml:"secret" json:"secret"`
 
-	Endpoint string `json:"endpoint"`
-	Region   string `json:"region"`
+	Endpoint string `toml:"endpoint" json:"endpoint"`
+	Region   string `toml:"region" json:"region"`
 
-	Bucket string `json:"bucket"`
+	Bucket string `toml:"bucket" json:"bucket"`
 }
 
 func (o *Options) makeConfig() (cfg aws.Config) {
