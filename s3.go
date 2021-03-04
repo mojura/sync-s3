@@ -9,6 +9,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/hatchify/errors"
+)
+
+const (
+	// ErrInvalidName is returned when a name is empty
+	ErrInvalidName = errors.Error("invalid name, cannot be empty")
+	// ErrInvalidDirectory is returned when a directory is empty
+	ErrInvalidDirectory = errors.Error("invalid directory, cannot be empty")
 )
 
 func New(o Options) (sp *S3, err error) {
@@ -40,10 +48,15 @@ type S3 struct {
 }
 
 func (s *S3) Export(filename string, r io.Reader) (err error) {
+	rs, ok := r.(io.ReadSeeker)
+	if !ok {
+		rs = aws.ReadSeekCloser(r)
+	}
+
 	input := &s3.PutObjectInput{
 		Bucket:               aws.String(s.o.Bucket),
 		Key:                  aws.String(filename),
-		Body:                 aws.ReadSeekCloser(r),
+		Body:                 rs,
 		ServerSideEncryption: aws.String("AES256"),
 		ACL:                  aws.String("private"),
 	}
@@ -52,11 +65,7 @@ func (s *S3) Export(filename string, r io.Reader) (err error) {
 	return
 }
 
-func (s *S3) ImportNext(ctx context.Context, prefix, lastFilename string, w io.WriterAt) (filename string, err error) {
-	if filename, err = s.getNextKey(ctx, prefix, lastFilename); err != nil {
-		return
-	}
-
+func (s *S3) Import(ctx context.Context, filename string, w io.WriterAt) (err error) {
 	getInput := s3.GetObjectInput{
 		Bucket: aws.String(s.o.Bucket),
 		Key:    aws.String(filename),
@@ -66,25 +75,16 @@ func (s *S3) ImportNext(ctx context.Context, prefix, lastFilename string, w io.W
 	return
 }
 
-func (s *S3) createBucket() (err error) {
-	_, err = s.s3.CreateBucket(&s3.CreateBucketInput{
-		Bucket: aws.String(s.o.Bucket),
-		ACL:    aws.String("private"),
-	})
-
-	switch {
-	case err == nil:
-	case strings.Contains(err.Error(), s3.ErrCodeBucketAlreadyExists):
-	case strings.Contains(err.Error(), s3.ErrCodeBucketAlreadyOwnedByYou):
-
-	default:
+func (s *S3) ImportNext(ctx context.Context, prefix, lastFilename string, w io.WriterAt) (key string, err error) {
+	if key, err = s.GetNextKey(ctx, prefix, lastFilename); err != nil {
 		return
 	}
 
-	return nil
+	err = s.Import(ctx, key, w)
+	return
 }
 
-func (s *S3) getNextKey(ctx context.Context, prefix, lastFilename string) (nextKey string, err error) {
+func (s *S3) GetNextKey(ctx context.Context, prefix, lastFilename string) (nextKey string, err error) {
 	input := s3.ListObjectsV2Input{
 		Bucket:     aws.String(s.o.Bucket),
 		Prefix:     aws.String(prefix),
@@ -104,6 +104,24 @@ func (s *S3) getNextKey(ctx context.Context, prefix, lastFilename string) (nextK
 
 	nextKey = *out.Contents[0].Key
 	return
+}
+
+func (s *S3) createBucket() (err error) {
+	_, err = s.s3.CreateBucket(&s3.CreateBucketInput{
+		Bucket: aws.String(s.o.Bucket),
+		ACL:    aws.String("private"),
+	})
+
+	switch {
+	case err == nil:
+	case strings.Contains(err.Error(), s3.ErrCodeBucketAlreadyExists):
+	case strings.Contains(err.Error(), s3.ErrCodeBucketAlreadyOwnedByYou):
+
+	default:
+		return
+	}
+
+	return nil
 }
 
 func (s *S3) deleteBucket() (err error) {
