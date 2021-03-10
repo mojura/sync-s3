@@ -53,6 +53,11 @@ type Importer struct {
 	onImport       chan struct{}
 }
 
+// OnImport will return an onImport channel
+func (i *Importer) OnImport() <-chan struct{} {
+	return i.onImport
+}
+
 func (i *Importer) watch() {
 	var (
 		lastKey string
@@ -132,9 +137,4 @@ func (i *Importer) process(nextKey string) (err error) {
 	}
 
 	return i.k.Merge(r)
-}
-
-// OnImport will return an onImport channel
-func (i *Importer) OnImport() <-chan struct{} {
-	return i.onImport
 }
