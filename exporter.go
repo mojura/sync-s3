@@ -24,5 +24,9 @@ func (e *Exporter) Export(r *kiroku.Reader) (err error) {
 	prefix := e.o.Name + "."
 	filename := generateFilename(prefix, m.CreatedAt)
 	rdr := r.ReadSeeker()
+	if _, err = rdr.Seek(0, 0); err != nil {
+		return
+	}
+
 	return e.s3.Export(filename, rdr)
 }

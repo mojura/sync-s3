@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gdbu/scribe"
@@ -17,22 +18,25 @@ var (
 )
 
 // NewImporter will return a new instance of Importer
-func NewImporter(dir, name string, o ImporterOptions) (ip *Importer, err error) {
+func NewImporter(ctx context.Context, o ImporterOptions) (ip *Importer, err error) {
 	var i Importer
 	if i.s3, err = New(o.Options); err != nil {
 		return
 	}
 
-	if i.k, err = kiroku.NewWriter(dir, name); err != nil {
+	if i.k, err = kiroku.NewWriter(o.Dir, o.Name); err != nil {
 		return
 	}
 
 	// Fill default values
 	o.fill()
 
-	prefix := fmt.Sprintf("Importer (%s)", name)
+	prefix := fmt.Sprintf("Importer (%s)", o.Name)
+	i.ctx = ctx
 	i.out = scribe.New(prefix)
-	i.name = name
+	i.o = o
+	i.onImport = make(chan struct{}, 1)
+	go i.watch()
 	ip = &i
 	return
 }
@@ -43,33 +47,42 @@ type Importer struct {
 	out *scribe.Scribe
 	ctx context.Context
 
-	name string
+	o ImporterOptions
 
 	updateInterval time.Duration
-	onUpdate       func()
+	onImport       chan struct{}
 }
 
-func (i *Importer) Watch() {
+func (i *Importer) watch() {
 	var (
-		nextKey string
+		lastKey string
 		err     error
 	)
 
-	prefix := i.name + "."
+	prefix := i.o.Name + "."
 	m := i.k.Meta()
 	if m.CreatedAt > 0 {
-		nextKey = generateFilename(prefix, m.CreatedAt)
+		lastKey = generateFilename(prefix, m.CreatedAt)
 	}
 
 	for !i.isClosed() {
-		nextKey, err = i.s3.GetNextKey(i.ctx, prefix, nextKey)
+		var nextKey string
+		nextKey, err = i.s3.GetNextKey(i.ctx, prefix, lastKey)
 		switch err {
 		case nil:
+		case context.Canceled:
+			return
 		case io.EOF:
 			time.Sleep(i.updateInterval)
+			continue
 		default:
+			if strings.Contains(err.Error(), "context canceled") {
+				return
+			}
+
 			i.out.Errorf("Error getting next key: %v. Sleeping for 1 minute", err)
 			time.Sleep(time.Minute)
+			continue
 		}
 
 		if err = i.process(nextKey); err != nil {
@@ -79,7 +92,14 @@ func (i *Importer) Watch() {
 			continue
 		}
 
-		i.onUpdate()
+		lastKey = nextKey
+
+		select {
+		case i.onImport <- struct{}{}:
+			// Push to onImport channel
+		default:
+			// onImport channel is full, discard push
+		}
 	}
 }
 
@@ -94,7 +114,7 @@ func (i *Importer) isClosed() bool {
 
 func (i *Importer) process(nextKey string) (err error) {
 	var f *os.File
-	if f, err = ioutil.TempFile("", i.name); err != nil {
+	if f, err = ioutil.TempFile("", i.o.Name); err != nil {
 		return
 	}
 
@@ -112,4 +132,9 @@ func (i *Importer) process(nextKey string) (err error) {
 	}
 
 	return i.k.Merge(r)
+}
+
+// OnImport will return an onImport channel
+func (i *Importer) OnImport() <-chan struct{} {
+	return i.onImport
 }

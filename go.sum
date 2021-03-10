@@ -7,6 +7,8 @@ github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaB
 github.com/gdbu/scribe v0.4.88/go.mod h1:d2N8Lim+phn6EuoppRUs6Vm9CSAHtzhTubGNM+A9Ya4=
 github.com/gdbu/scribe v0.5.2 h1:HIsDMBYKJp/nZO8NQVeTr6l+QKDDuxcroq+pSvxwXSM=
 github.com/gdbu/scribe v0.5.2/go.mod h1:d2N8Lim+phn6EuoppRUs6Vm9CSAHtzhTubGNM+A9Ya4=
+github.com/gdbu/scribe v0.5.3 h1:kWkkE8p3iLB2CuReTTLKBYnRx4OTMZpDJTO2Z0xZ0WE=
+github.com/gdbu/scribe v0.5.3/go.mod h1:d2N8Lim+phn6EuoppRUs6Vm9CSAHtzhTubGNM+A9Ya4=
 github.com/hatchify/colors v0.4.79 h1:E7LXqZVYDFNaTcQGxlBSfEKQ2rByeAUW84uKkat3AoA=
 github.com/hatchify/colors v0.4.79/go.mod h1:t0952Ef1zDFMVTCkOwhrdJS9ToVWTdcJ3PWCHZADLuU=
 github.com/hatchify/cron v0.4.82 h1:NXiWl4/9w8Egg2N2FCrQuPYLevszgUv62ZHHMzfFbi8=
@@ -19,8 +21,8 @@ github.com/jmespath/go-jmespath/internal/testify v1.5.1 h1:shLQSRRSCCPj3f2gpwzGw
 github.com/jmespath/go-jmespath/internal/testify v1.5.1/go.mod h1:L3OGu8Wl2/fWfCI6z80xFu9LTZmf1ZRjMHUOPmWr69U=
 github.com/mojura/enkodo v0.5.5 h1:bkjksvk8XeO0SLjtkUzvqS9oJlAIO5WFibSCSn9o/58=
 github.com/mojura/enkodo v0.5.5/go.mod h1:9/1bBkNTRhwLPSFAo0uG1a+numnsZMxNIzLdWxlFl+g=
-github.com/mojura/kiroku v0.1.2 h1:zhTnoVPt8WDml9NNiN4MxlvPREHsMxYkpyM08bma4K0=
-github.com/mojura/kiroku v0.1.2/go.mod h1:FAEy68+JS1rJbtWRm6Ypygp4Z60CQvlvVQYRDhCVqNI=
+github.com/mojura/kiroku v0.1.5 h1:vQWJIOZExxnLWIHFPQSEmxfDAiU7vdkaHSNIvDPHKxk=
+github.com/mojura/kiroku v0.1.5/go.mod h1:FAEy68+JS1rJbtWRm6Ypygp4Z60CQvlvVQYRDhCVqNI=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
