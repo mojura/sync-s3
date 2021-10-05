@@ -2,13 +2,14 @@ package s3
 
 import (
 	"context"
+	"fmt"
 	"io"
-	"strings"
+	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+
 	"github.com/hatchify/errors"
 )
 
@@ -20,19 +21,18 @@ const (
 )
 
 func New(o Options) (sp *S3, err error) {
-	var sess *session.Session
-	cfg := o.makeConfig()
-	if sess, err = session.NewSession(&cfg); err != nil {
-		return
+	// Load the SDK's configuration from environment and shared config, and
+	// create the client with this.
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(o.Region))
+	if err != nil {
+		log.Fatalf("failed to load SDK configuration, %v", err)
 	}
 
 	var s S3
 	s.o = o
-	s.s3 = s3.New(sess)
-	s.d = s3manager.NewDownloader(sess)
-	s.u = s3manager.NewUploader(sess)
+	s.s3 = s3.NewFromConfig(cfg)
 
-	if err = s.createBucket(); err != nil {
+	if err = s.createBucket(context.Background()); err != nil {
 		return
 	}
 
@@ -42,58 +42,48 @@ func New(o Options) (sp *S3, err error) {
 
 type S3 struct {
 	o  Options
-	s3 *s3.S3
-	d  *s3manager.Downloader
-	u  *s3manager.Uploader
+	s3 *s3.Client
 }
 
-func (s *S3) Export(filename string, r io.Reader) (err error) {
-	rs, ok := r.(io.ReadSeeker)
-	if !ok {
-		rs = aws.ReadSeekCloser(r)
-	}
-
+func (s *S3) Export(ctx context.Context, filename string, r io.Reader) (err error) {
 	input := &s3.PutObjectInput{
 		Bucket:               aws.String(s.o.Bucket),
 		Key:                  aws.String(filename),
-		Body:                 rs,
-		ServerSideEncryption: aws.String("AES256"),
-		ACL:                  aws.String("private"),
+		Body:                 r,
+		ServerSideEncryption: "AES256",
+		ACL:                  "private",
 	}
 
-	_, err = s.s3.PutObject(input)
+	_, err = s.s3.PutObject(ctx, input)
 	return
 }
 
-func (s *S3) Import(ctx context.Context, filename string, w io.WriterAt) (err error) {
+func (s *S3) Import(ctx context.Context, filename string, w io.Writer) (err error) {
 	getInput := s3.GetObjectInput{
 		Bucket: aws.String(s.o.Bucket),
 		Key:    aws.String(filename),
 	}
 
-	_, err = s.d.DownloadWithContext(ctx, w, &getInput)
-	return
-}
-
-func (s *S3) ImportNext(ctx context.Context, prefix, lastFilename string, w io.WriterAt) (key string, err error) {
-	if key, err = s.GetNextKey(ctx, prefix, lastFilename); err != nil {
+	var out *s3.GetObjectOutput
+	if out, err = s.s3.GetObject(ctx, &getInput); err != nil {
 		return
 	}
+	defer out.Body.Close()
 
-	err = s.Import(ctx, key, w)
+	_, err = io.Copy(w, out.Body)
 	return
 }
 
-func (s *S3) GetNextKey(ctx context.Context, prefix, lastFilename string) (nextKey string, err error) {
+func (s *S3) GetNext(ctx context.Context, prefix, lastFilename string) (nextKey string, err error) {
 	input := s3.ListObjectsV2Input{
 		Bucket:     aws.String(s.o.Bucket),
 		Prefix:     aws.String(prefix),
 		StartAfter: aws.String(lastFilename),
-		MaxKeys:    aws.Int64(1),
+		MaxKeys:    1,
 	}
 
 	var out *s3.ListObjectsV2Output
-	if out, err = s.s3.ListObjectsV2WithContext(ctx, &input); err != nil {
+	if out, err = s.s3.ListObjectsV2(ctx, &input); err != nil {
 		return
 	}
 
@@ -106,26 +96,28 @@ func (s *S3) GetNextKey(ctx context.Context, prefix, lastFilename string) (nextK
 	return
 }
 
-func (s *S3) createBucket() (err error) {
-	_, err = s.s3.CreateBucket(&s3.CreateBucketInput{
+func (s *S3) createBucket(ctx context.Context) (err error) {
+	opts := &s3.CreateBucketInput{
 		Bucket: aws.String(s.o.Bucket),
-		ACL:    aws.String("private"),
-	})
+		ACL:    "private",
+	}
 
+	_, err = s.s3.CreateBucket(ctx, opts)
 	switch {
 	case err == nil:
-	case strings.Contains(err.Error(), s3.ErrCodeBucketAlreadyExists):
-	case strings.Contains(err.Error(), s3.ErrCodeBucketAlreadyOwnedByYou):
+	//case strings.Contains(err.Error(), s3.ErrCodeBucketAlreadyExists):
+	//case strings.Contains(err.Error(), s3.ErrCodeBucketAlreadyOwnedByYou):
 
 	default:
+		fmt.Printf("THIS ONE <%v>\n", err)
 		return
 	}
 
 	return nil
 }
 
-func (s *S3) deleteBucket() (err error) {
-	if err = s.emptyBucket(); err != nil {
+func (s *S3) deleteBucket(ctx context.Context) (err error) {
+	if err = s.emptyBucket(ctx); err != nil {
 		return
 	}
 
@@ -133,23 +125,15 @@ func (s *S3) deleteBucket() (err error) {
 		Bucket: aws.String(s.o.Bucket),
 	}
 
-	_, err = s.s3.DeleteBucket(input)
+	_, err = s.s3.DeleteBucket(ctx, input)
 	return
 }
 
-func (s *S3) emptyBucket() (err error) {
-	// Setup BatchDeleteIterator to iterate through a list of objects.
-	iter := s3manager.NewDeleteListIterator(s.s3, &s3.ListObjectsInput{
-		Bucket: aws.String(s.o.Bucket),
-	})
-
-	// Initialize batcher
-	batcher := s3manager.NewBatchDeleteWithClient(s.s3)
-
-	// Traverse iterator deleting each object
-	if err = batcher.Delete(aws.BackgroundContext(), iter); err != nil {
-		return
+func (s *S3) emptyBucket(ctx context.Context) (err error) {
+	input := s3.DeleteObjectsInput{
+		Bucket: &s.o.Bucket,
 	}
 
+	_, err = s.s3.DeleteObjects(ctx, &input)
 	return
 }
