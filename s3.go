@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/hatchify/errors"
+	"github.com/mojura/kiroku"
 )
 
 const (
@@ -17,6 +18,11 @@ const (
 	ErrInvalidName = errors.Error("invalid name, cannot be empty")
 	// ErrInvalidDirectory is returned when a directory is empty
 	ErrInvalidDirectory = errors.Error("invalid directory, cannot be empty")
+)
+
+var (
+	_ kiroku.Importer = &S3{}
+	_ kiroku.Exporter = &S3{}
 )
 
 func New(o Options) (sp *S3, err error) {
@@ -29,7 +35,6 @@ func New(o Options) (sp *S3, err error) {
 	var s S3
 	s.o = o
 	s.s3 = s3.New(sess)
-	s.d = s3manager.NewDownloader(sess)
 	s.u = s3manager.NewUploader(sess)
 
 	if err = s.createBucket(); err != nil {
@@ -43,7 +48,6 @@ func New(o Options) (sp *S3, err error) {
 type S3 struct {
 	o  Options
 	s3 *s3.S3
-	d  *s3manager.Downloader
 	u  *s3manager.Uploader
 }
 
@@ -65,26 +69,23 @@ func (s *S3) Export(filename string, r io.Reader) (err error) {
 	return
 }
 
-func (s *S3) Import(ctx context.Context, filename string, w io.WriterAt) (err error) {
+func (s *S3) Import(ctx context.Context, filename string, w io.Writer) (err error) {
 	getInput := s3.GetObjectInput{
 		Bucket: aws.String(s.o.Bucket),
 		Key:    aws.String(filename),
 	}
 
-	_, err = s.d.DownloadWithContext(ctx, w, &getInput)
-	return
-}
-
-func (s *S3) ImportNext(ctx context.Context, prefix, lastFilename string, w io.WriterAt) (key string, err error) {
-	if key, err = s.GetNextKey(ctx, prefix, lastFilename); err != nil {
+	var out *s3.GetObjectOutput
+	if out, err = s.s3.GetObjectWithContext(ctx, &getInput); err != nil {
 		return
 	}
+	defer out.Body.Close()
 
-	err = s.Import(ctx, key, w)
+	_, err = io.Copy(w, out.Body)
 	return
 }
 
-func (s *S3) GetNextKey(ctx context.Context, prefix, lastFilename string) (nextKey string, err error) {
+func (s *S3) GetNext(ctx context.Context, prefix, lastFilename string) (nextKey string, err error) {
 	input := s3.ListObjectsV2Input{
 		Bucket:     aws.String(s.o.Bucket),
 		Prefix:     aws.String(prefix),
