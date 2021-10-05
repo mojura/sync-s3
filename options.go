@@ -1,9 +1,6 @@
 package s3
 
-import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-)
+import "github.com/aws/aws-sdk-go-v2/aws"
 
 type Options struct {
 	Key    string `toml:"key" json:"key"`
@@ -15,16 +12,8 @@ type Options struct {
 	Bucket string `toml:"bucket" json:"bucket"`
 }
 
-func (o *Options) makeConfig() (cfg aws.Config) {
-	cfg.Credentials = credentials.NewStaticCredentials(o.Key, o.Secret, "")
-
-	if len(o.Endpoint) > 0 {
-		cfg.Endpoint = aws.String(o.Endpoint)
-	}
-
-	if len(o.Region) > 0 {
-		cfg.Region = aws.String(o.Region)
-	}
-
+// ResolveEndpoint allows Options to match the aws.EndpointResolver interface
+func (o *Options) ResolveEndpoint(key, service string) (endpoint aws.Endpoint, err error) {
+	endpoint.URL = o.Endpoint
 	return
 }
