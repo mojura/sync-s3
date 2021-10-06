@@ -45,21 +45,6 @@ func TestS3_Export(t *testing.T) {
 	}
 }
 
-func testInit() (s *S3, err error) {
-	var o Options
-	o.Bucket = "mojura"
-	o.Key = testKey
-	o.Secret = testSecret
-	o.Region = "us-west-1"
-	return New(o)
-}
-
-func testClose(t *testing.T, s *S3) {
-	if err := s.deleteBucket(); err != nil {
-		t.Fatalf("Error encountered while deleting: %v\n", err)
-	}
-}
-
 func TestExportImport(t *testing.T) {
 	var (
 		s   *S3
@@ -94,7 +79,7 @@ func TestExportImport(t *testing.T) {
 	if s, err = testInit(); err != nil {
 		t.Fatal(err)
 	}
-	//defer func() { _ = s.deleteBucket() }()
+	defer func() { _ = s.deleteBucket() }()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -119,5 +104,20 @@ func TestExportImport(t *testing.T) {
 
 	if _, err = s.GetNext(ctx, "", nextKey); err != io.EOF {
 		t.Fatalf("invalid error, expected <%v> and received <%v>", io.EOF, err)
+	}
+}
+
+func testInit() (s *S3, err error) {
+	var o Options
+	o.Bucket = "mojura"
+	o.Key = testKey
+	o.Secret = testSecret
+	o.Region = "us-west-1"
+	return New(o)
+}
+
+func testClose(t *testing.T, s *S3) {
+	if err := s.deleteBucket(); err != nil {
+		t.Fatalf("Error encountered while deleting: %v\n", err)
 	}
 }
