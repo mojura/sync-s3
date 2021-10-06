@@ -1,9 +1,7 @@
 package s3
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -40,7 +38,6 @@ func TestS3_Export(t *testing.T) {
 	defer testClose(t, s)
 
 	if err = s.Export(
-		context.Background(),
 		"ay_0.txt",
 		strings.NewReader("ayyyy 0!"),
 	); err != nil {
@@ -48,117 +45,66 @@ func TestS3_Export(t *testing.T) {
 	}
 }
 
-func TestS3_Import(t *testing.T) {
+func TestExportImport(t *testing.T) {
 	var (
 		s   *S3
 		err error
 	)
 
+	type testcase struct {
+		key   string
+		value string
+	}
+
+	tcs := []testcase{
+		{
+			key:   "helloWorld_0",
+			value: "0_value",
+		},
+		{
+			key:   "helloWorld_1",
+			value: "1_value",
+		},
+		{
+			key:   "helloWorld_2",
+			value: "2_value",
+		},
+	}
+
+	if err = os.MkdirAll("./test_data/import", 0744); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll("./test_data")
+
 	if s, err = testInit(); err != nil {
 		t.Fatal(err)
 	}
-	defer testClose(t, s)
+	defer func() { _ = s.deleteBucket() }()
 
-	if err = s.Export(
-		context.Background(),
-		"ay_0.txt",
-		strings.NewReader("ayyyy 0!"),
-	); err != nil {
-		t.Fatal(err)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Populate
+	for _, tc := range tcs {
+		if err = s.Export(tc.key, strings.NewReader(tc.value)); err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	if err = s.Export(
-		context.Background(),
-		"helloWorld_0.txt",
-		strings.NewReader("hello world 0!"),
-	); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = s.Export(
-		context.Background(),
-		"helloWorld_1.txt",
-		strings.NewReader("hello world 1!"),
-	); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = s.Export(
-		context.Background(),
-		"helloWorld_2.txt",
-		strings.NewReader("hello world 2!"),
-	); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = s.Export(
-		context.Background(),
-		"zoop_0.txt",
-		strings.NewReader("zoop! 0"),
-	); err != nil {
-		t.Fatal(err)
-	}
-
-	var (
-		count   int
-		nextKey string
-	)
-
-	for {
-		buf := bytes.NewBuffer(nil)
-		if nextKey, err = s.GetNext(context.Background(), "helloWorld", nextKey); err != nil {
-			break
+	var nextKey string
+	for i, tc := range tcs {
+		if nextKey, err = s.GetNext(ctx, "", nextKey); err != nil {
+			t.Fatalf("error during GetNext #%d: %v", i, err)
 		}
 
-		if err = s.Import(context.Background(), nextKey, buf); err != nil {
-			break
+		if nextKey != tc.key {
+			t.Fatalf("invalid filename, expected <%s> and received <%s>", tc.key, nextKey)
 		}
-
-		var targetFilename, targetFileContents string
-		switch count {
-		case 0:
-			targetFilename = "helloWorld_0.txt"
-			targetFileContents = "hello world 0!"
-		case 1:
-			targetFilename = "helloWorld_1.txt"
-			targetFileContents = "hello world 1!"
-		case 2:
-			targetFilename = "helloWorld_2.txt"
-			targetFileContents = "hello world 2!"
-		}
-
-		if err = testAssertString(targetFilename, nextKey); err != nil {
-			t.Fatalf("error with filename: %v", err)
-		}
-
-		if err = testAssertString(targetFileContents, buf.String()); err != nil {
-			t.Fatalf("error with file contents: %v", err)
-		}
-
-		count++
 	}
 
-	switch err {
-	case nil:
-	case io.EOF:
-
-	default:
-		t.Fatal(err)
+	if _, err = s.GetNext(ctx, "", nextKey); err != io.EOF {
+		t.Fatalf("invalid error, expected <%v> and received <%v>", io.EOF, err)
 	}
-
-	if count != 3 {
-		t.Fatalf("invalid count, expected %d and received %d", 3, count)
-	}
-}
-
-func testAssertString(a, b string) (err error) {
-	switch {
-	case len(a) == 0:
-	case a != b:
-		return fmt.Errorf("invalid nextKey, expected <%s> and received <%s>", a, b)
-	}
-
-	return nil
 }
 
 func testInit() (s *S3, err error) {
@@ -171,7 +117,7 @@ func testInit() (s *S3, err error) {
 }
 
 func testClose(t *testing.T, s *S3) {
-	if err := s.deleteBucket(context.Background()); err != nil {
+	if err := s.deleteBucket(); err != nil {
 		t.Fatalf("Error encountered while deleting: %v\n", err)
 	}
 }
