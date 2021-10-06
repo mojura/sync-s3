@@ -2,7 +2,6 @@ package s3
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -46,16 +45,6 @@ func TestS3_Export(t *testing.T) {
 	}
 }
 
-func testAssertString(a, b string) (err error) {
-	switch {
-	case len(a) == 0:
-	case a != b:
-		return fmt.Errorf("invalid nextKey, expected <%s> and received <%s>", a, b)
-	}
-
-	return nil
-}
-
 func testInit() (s *S3, err error) {
 	var o Options
 	o.Bucket = "mojura"
@@ -78,27 +67,21 @@ func TestExportImport(t *testing.T) {
 	)
 
 	type testcase struct {
-		name  string
 		key   string
 		value string
-
-		filename string
 	}
 
 	tcs := []testcase{
 		{
-			name:  "helloWorld_0",
-			key:   "0",
+			key:   "helloWorld_0",
 			value: "0_value",
 		},
 		{
-			name:  "helloWorld_1",
-			key:   "1",
+			key:   "helloWorld_1",
 			value: "1_value",
 		},
 		{
-			name:  "helloWorld_2",
-			key:   "2",
+			key:   "helloWorld_2",
 			value: "2_value",
 		},
 	}
@@ -118,7 +101,7 @@ func TestExportImport(t *testing.T) {
 
 	// Populate
 	for _, tc := range tcs {
-		if err = s.Export(tc.name, strings.NewReader(tc.value)); err != nil {
+		if err = s.Export(tc.key, strings.NewReader(tc.value)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -129,8 +112,8 @@ func TestExportImport(t *testing.T) {
 			t.Fatalf("error during GetNext #%d: %v", i, err)
 		}
 
-		if nextKey != tc.name {
-			t.Fatalf("invalid filename, expected <%s> and received <%s>", tc.name, nextKey)
+		if nextKey != tc.key {
+			t.Fatalf("invalid filename, expected <%s> and received <%s>", tc.key, nextKey)
 		}
 	}
 
