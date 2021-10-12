@@ -38,6 +38,7 @@ func TestS3_Export(t *testing.T) {
 	defer testClose(t, s)
 
 	if err = s.Export(
+		context.Background(),
 		"ay_0.txt",
 		strings.NewReader("ayyyy 0!"),
 	); err != nil {
@@ -86,7 +87,7 @@ func TestExportImport(t *testing.T) {
 
 	// Populate
 	for _, tc := range tcs {
-		if err = s.Export(tc.key, strings.NewReader(tc.value)); err != nil {
+		if err = s.Export(context.Background(), tc.key, strings.NewReader(tc.value)); err != nil {
 			t.Fatal(err)
 		}
 	}

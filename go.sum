@@ -18,8 +18,8 @@ github.com/jmespath/go-jmespath/internal/testify v1.5.1 h1:shLQSRRSCCPj3f2gpwzGw
 github.com/jmespath/go-jmespath/internal/testify v1.5.1/go.mod h1:L3OGu8Wl2/fWfCI6z80xFu9LTZmf1ZRjMHUOPmWr69U=
 github.com/mojura/enkodo v0.5.5 h1:bkjksvk8XeO0SLjtkUzvqS9oJlAIO5WFibSCSn9o/58=
 github.com/mojura/enkodo v0.5.5/go.mod h1:9/1bBkNTRhwLPSFAo0uG1a+numnsZMxNIzLdWxlFl+g=
-github.com/mojura/kiroku v0.5.0 h1:nlNoY9nbB8FtBCk8GWPcqxXaeyX7bgak3YiyGHw/Kp0=
-github.com/mojura/kiroku v0.5.0/go.mod h1:BSzGOuu86ovZan32cPu51HY73I9/yOV/LaAOx0z0gno=
+github.com/mojura/kiroku v0.8.0 h1:RypwXCo2xoIfu+vbT6Xvbju/n+hH+LAxQldaO3ozb3Q=
+github.com/mojura/kiroku v0.8.0/go.mod h1:BSzGOuu86ovZan32cPu51HY73I9/yOV/LaAOx0z0gno=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=

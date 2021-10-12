@@ -20,10 +20,7 @@ const (
 	ErrInvalidDirectory = errors.Error("invalid directory, cannot be empty")
 )
 
-var (
-	_ kiroku.Importer = &S3{}
-	_ kiroku.Exporter = &S3{}
-)
+var _ kiroku.Source = &S3{}
 
 func New(o Options) (sp *S3, err error) {
 	var sess *session.Session
@@ -35,7 +32,6 @@ func New(o Options) (sp *S3, err error) {
 	var s S3
 	s.o = o
 	s.s3 = s3.New(sess)
-	s.u = s3manager.NewUploader(sess)
 
 	if err = s.createBucket(); err != nil {
 		return
@@ -48,10 +44,9 @@ func New(o Options) (sp *S3, err error) {
 type S3 struct {
 	o  Options
 	s3 *s3.S3
-	u  *s3manager.Uploader
 }
 
-func (s *S3) Export(filename string, r io.Reader) (err error) {
+func (s *S3) Export(ctx context.Context, filename string, r io.Reader) (err error) {
 	rs, ok := r.(io.ReadSeeker)
 	if !ok {
 		rs = aws.ReadSeekCloser(r)
@@ -65,7 +60,10 @@ func (s *S3) Export(filename string, r io.Reader) (err error) {
 		ACL:                  aws.String("private"),
 	}
 
-	_, err = s.s3.PutObject(input)
+	if _, err = s.s3.PutObjectWithContext(ctx, input); err != nil {
+		return
+	}
+
 	return
 }
 
@@ -83,6 +81,21 @@ func (s *S3) Import(ctx context.Context, filename string, w io.Writer) (err erro
 
 	_, err = io.Copy(w, out.Body)
 	return
+}
+
+func (s *S3) Get(ctx context.Context, filename string, fn func(r io.Reader) error) (err error) {
+	input := s3.GetObjectInput{
+		Bucket: aws.String(s.o.Bucket),
+		Key:    aws.String(filename),
+	}
+
+	var out *s3.GetObjectOutput
+	if out, err = s.s3.GetObjectWithContext(ctx, &input); err != nil {
+		return
+	}
+	defer out.Body.Close()
+
+	return fn(out.Body)
 }
 
 func (s *S3) GetNext(ctx context.Context, prefix, lastFilename string) (nextKey string, err error) {
