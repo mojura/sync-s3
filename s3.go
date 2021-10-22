@@ -84,14 +84,10 @@ func (s *S3) Import(ctx context.Context, filename string, w io.Writer) (err erro
 }
 
 func (s *S3) Get(ctx context.Context, filename string, fn func(r io.Reader) error) (err error) {
-	input := s3.GetObjectInput{
-		Bucket: aws.String(s.o.Bucket),
-		Key:    aws.String(filename),
-	}
-
 	var out *s3.GetObjectOutput
-	if out, err = s.s3.GetObjectWithContext(ctx, &input); err != nil {
-		return
+	input := newGetInputObject(s.o.Bucket, filename)
+	if out, err = s.s3.GetObjectWithContext(ctx, input); err != nil {
+		return handleError(err)
 	}
 	defer out.Body.Close()
 
