@@ -12,7 +12,8 @@ type Options struct {
 	Endpoint string `toml:"endpoint" json:"endpoint"`
 	Region   string `toml:"region" json:"region"`
 
-	Bucket string `toml:"bucket" json:"bucket"`
+	Bucket              string `toml:"bucket" json:"bucket"`
+	AvoidBucketCreation bool   `toml:"avoid-bucket-creation" json:"avoidBucketCreation"`
 }
 
 func (o *Options) makeConfig() (cfg aws.Config) {

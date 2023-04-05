@@ -117,6 +117,10 @@ func (s *S3) GetNext(ctx context.Context, prefix, lastFilename string) (nextKey 
 }
 
 func (s *S3) createBucket() (err error) {
+	if s.o.AvoidBucketCreation {
+		return
+	}
+
 	_, err = s.s3.CreateBucket(&s3.CreateBucketInput{
 		Bucket: aws.String(s.o.Bucket),
 		ACL:    aws.String("private"),
