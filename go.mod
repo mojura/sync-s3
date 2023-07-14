@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/aws/aws-sdk-go v1.37.19
 	github.com/hatchify/errors v0.4.82
-	github.com/mojura/kiroku v0.10.2
+	github.com/mojura/kiroku v0.10.4
 )
 
 require (
