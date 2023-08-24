@@ -37,12 +37,17 @@ func TestS3_Export(t *testing.T) {
 	}
 	defer testClose(t, s)
 
-	if err = s.Export(
+	var gotKey string
+	if gotKey, err = s.Export(
 		context.Background(),
 		"ay_0.txt",
 		strings.NewReader("ayyyy 0!"),
 	); err != nil {
 		t.Fatal(err)
+	}
+
+	if gotKey != "ay_0.txt" {
+		t.Fatalf("invalid newFilename, expected = <%v> and received = <%v>", "ay_0.txt", gotKey)
 	}
 }
 
@@ -87,8 +92,13 @@ func TestExportImport(t *testing.T) {
 
 	// Populate
 	for _, tc := range tcs {
-		if err = s.Export(context.Background(), tc.key, strings.NewReader(tc.value)); err != nil {
+		var gotKey string
+		if gotKey, err = s.Export(context.Background(), tc.key, strings.NewReader(tc.value)); err != nil {
 			t.Fatal(err)
+		}
+
+		if gotKey != tc.key {
+			t.Fatalf("invalid newFilename, expected = <%v> and received = <%v>", tc.key, gotKey)
 		}
 	}
 

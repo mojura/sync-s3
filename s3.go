@@ -46,7 +46,7 @@ type S3 struct {
 	s3 *s3.S3
 }
 
-func (s *S3) Export(ctx context.Context, filename string, r io.Reader) (err error) {
+func (s *S3) Export(ctx context.Context, filename string, r io.Reader) (newFilename string, err error) {
 	rs, ok := r.(io.ReadSeeker)
 	if !ok {
 		rs = aws.ReadSeekCloser(r)
@@ -64,6 +64,7 @@ func (s *S3) Export(ctx context.Context, filename string, r io.Reader) (err erro
 		return
 	}
 
+	newFilename = filename
 	return
 }
 
