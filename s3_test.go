@@ -40,6 +40,7 @@ func TestS3_Export(t *testing.T) {
 	var gotKey string
 	if gotKey, err = s.Export(
 		context.Background(),
+		"testing",
 		"ay_0.txt",
 		strings.NewReader("ayyyy 0!"),
 	); err != nil {
@@ -58,22 +59,26 @@ func TestExportImport(t *testing.T) {
 	)
 
 	type testcase struct {
-		key   string
-		value string
+		prefix string
+		key    string
+		value  string
 	}
 
 	tcs := []testcase{
 		{
-			key:   "helloWorld_0",
-			value: "0_value",
+			prefix: "testing",
+			key:    "helloWorld_0",
+			value:  "0_value",
 		},
 		{
-			key:   "helloWorld_1",
-			value: "1_value",
+			prefix: "testing",
+			key:    "helloWorld_1",
+			value:  "1_value",
 		},
 		{
-			key:   "helloWorld_2",
-			value: "2_value",
+			prefix: "testing",
+			key:    "helloWorld_2",
+			value:  "2_value",
 		},
 	}
 
@@ -93,7 +98,7 @@ func TestExportImport(t *testing.T) {
 	// Populate
 	for _, tc := range tcs {
 		var gotKey string
-		if gotKey, err = s.Export(context.Background(), tc.key, strings.NewReader(tc.value)); err != nil {
+		if gotKey, err = s.Export(context.Background(), tc.prefix, tc.key, strings.NewReader(tc.value)); err != nil {
 			t.Fatal(err)
 		}
 

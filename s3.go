@@ -3,6 +3,7 @@ package s3
 import (
 	"context"
 	"io"
+	"path"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -46,7 +47,7 @@ type S3 struct {
 	s3 *s3.S3
 }
 
-func (s *S3) Export(ctx context.Context, filename string, r io.Reader) (newFilename string, err error) {
+func (s *S3) Export(ctx context.Context, prefix, filename string, r io.Reader) (newFilename string, err error) {
 	rs, ok := r.(io.ReadSeeker)
 	if !ok {
 		rs = aws.ReadSeekCloser(r)
@@ -68,10 +69,11 @@ func (s *S3) Export(ctx context.Context, filename string, r io.Reader) (newFilen
 	return
 }
 
-func (s *S3) Import(ctx context.Context, filename string, w io.Writer) (err error) {
+func (s *S3) Import(ctx context.Context, prefix, filename string, w io.Writer) (err error) {
+	filepath := path.Join(prefix, filename)
 	getInput := s3.GetObjectInput{
 		Bucket: aws.String(s.o.Bucket),
-		Key:    aws.String(filename),
+		Key:    aws.String(filepath),
 	}
 
 	var out *s3.GetObjectOutput
@@ -84,9 +86,10 @@ func (s *S3) Import(ctx context.Context, filename string, w io.Writer) (err erro
 	return
 }
 
-func (s *S3) Get(ctx context.Context, filename string, fn func(r io.Reader) error) (err error) {
+func (s *S3) Get(ctx context.Context, prefix, filename string, fn func(r io.Reader) error) (err error) {
 	var out *s3.GetObjectOutput
-	input := newGetInputObject(s.o.Bucket, filename)
+	filepath := path.Join(prefix, filename)
+	input := newGetInputObject(s.o.Bucket, filepath)
 	if out, err = s.s3.GetObjectWithContext(ctx, input); err != nil {
 		return handleError(err)
 	}
