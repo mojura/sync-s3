@@ -53,9 +53,10 @@ func (s *S3) Export(ctx context.Context, prefix, filename string, r io.Reader) (
 		rs = aws.ReadSeekCloser(r)
 	}
 
+	filepath := path.Join(prefix, filename)
 	input := &s3.PutObjectInput{
 		Bucket:               aws.String(s.o.Bucket),
-		Key:                  aws.String(filename),
+		Key:                  aws.String(filepath),
 		Body:                 rs,
 		ServerSideEncryption: aws.String("AES256"),
 		ACL:                  aws.String("private"),
@@ -99,10 +100,11 @@ func (s *S3) Get(ctx context.Context, prefix, filename string, fn func(r io.Read
 }
 
 func (s *S3) GetNext(ctx context.Context, prefix, lastFilename string) (nextKey string, err error) {
+	startAfter := path.Join(prefix, lastFilename)
 	input := s3.ListObjectsV2Input{
 		Bucket:     aws.String(s.o.Bucket),
-		Prefix:     aws.String(prefix),
-		StartAfter: aws.String(lastFilename),
+		Prefix:     aws.String(prefix + "/"),
+		StartAfter: aws.String(startAfter),
 		MaxKeys:    aws.Int64(1),
 	}
 
@@ -116,7 +118,7 @@ func (s *S3) GetNext(ctx context.Context, prefix, lastFilename string) (nextKey 
 		return
 	}
 
-	nextKey = *out.Contents[0].Key
+	nextKey = path.Base(*out.Contents[0].Key)
 	return
 }
 
