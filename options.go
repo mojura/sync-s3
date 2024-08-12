@@ -14,6 +14,8 @@ type Options struct {
 
 	Bucket              string `toml:"bucket" json:"bucket"`
 	AvoidBucketCreation bool   `toml:"avoid-bucket-creation" json:"avoidBucketCreation"`
+
+	MaxRatePerSecond int64 `toml:"max-rate-per-second" json:"maxRatePerSecond"`
 }
 
 func (o *Options) makeConfig() (cfg aws.Config) {
