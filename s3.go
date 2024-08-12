@@ -33,6 +33,9 @@ func New(o Options) (sp *S3, err error) {
 	var s S3
 	s.o = o
 	s.s3 = s3.New(sess)
+	if o.MaxRatePerSecond > 0 {
+		s.sema = makeSemaphore(o.MaxRatePerSecond)
+	}
 
 	if err = s.createBucket(); err != nil {
 		return
@@ -45,6 +48,8 @@ func New(o Options) (sp *S3, err error) {
 type S3 struct {
 	o  Options
 	s3 *s3.S3
+
+	sema semaphore
 }
 
 func (s *S3) Export(ctx context.Context, prefix, filename string, r io.Reader) (newFilename string, err error) {
