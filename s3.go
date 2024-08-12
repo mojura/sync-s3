@@ -53,6 +53,7 @@ type S3 struct {
 }
 
 func (s *S3) Export(ctx context.Context, prefix, filename string, r io.Reader) (newFilename string, err error) {
+	s.sema.Use()
 	rs, ok := r.(io.ReadSeeker)
 	if !ok {
 		rs = aws.ReadSeekCloser(r)
@@ -76,6 +77,7 @@ func (s *S3) Export(ctx context.Context, prefix, filename string, r io.Reader) (
 }
 
 func (s *S3) Import(ctx context.Context, prefix, filename string, w io.Writer) (err error) {
+	s.sema.Use()
 	filepath := path.Join(prefix, filename)
 	getInput := s3.GetObjectInput{
 		Bucket: aws.String(s.o.Bucket),
@@ -93,6 +95,7 @@ func (s *S3) Import(ctx context.Context, prefix, filename string, w io.Writer) (
 }
 
 func (s *S3) Get(ctx context.Context, prefix, filename string, fn func(r io.Reader) error) (err error) {
+	s.sema.Use()
 	var out *s3.GetObjectOutput
 	filepath := path.Join(prefix, filename)
 	input := newGetInputObject(s.o.Bucket, filepath)
@@ -105,6 +108,7 @@ func (s *S3) Get(ctx context.Context, prefix, filename string, fn func(r io.Read
 }
 
 func (s *S3) GetNext(ctx context.Context, prefix, lastFilename string) (nextKey string, err error) {
+	s.sema.Use()
 	startAfter := path.Join(prefix, lastFilename)
 	input := s3.ListObjectsV2Input{
 		Bucket:     aws.String(s.o.Bucket),
