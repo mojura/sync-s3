@@ -7,11 +7,14 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/hatchify/errors"
 	"github.com/mojura/kiroku"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 const (
@@ -41,6 +44,26 @@ func New(o Options) (sp *S3, err error) {
 		return
 	}
 
+	s.exportsErrored = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "mojura_sync_s3_exports_error_total",
+		Help: "The number of export events with errors (https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#RESTErrorResponses)",
+	}, []string{"aws_error"})
+
+	s.importsErrored = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "mojura_sync_s3_imports_error_total",
+		Help: "The number of imports events with errors (https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#RESTErrorResponses)",
+	}, []string{"aws_error"})
+
+	s.getErrored = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "mojura_sync_s3_get_error_total",
+		Help: "The number of get events with errors (https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#RESTErrorResponses)",
+	}, []string{"aws_error"})
+
+	s.getNextErrored = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "mojura_sync_s3_get_next_error_total",
+		Help: "The number of get next events with errors (https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#RESTErrorResponses)",
+	}, []string{"aws_error"})
+
 	sp = &s
 	return
 }
@@ -50,6 +73,11 @@ type S3 struct {
 	s3 *s3.S3
 
 	sema semaphore
+
+	exportsErrored *prometheus.CounterVec
+	importsErrored *prometheus.CounterVec
+	getErrored     *prometheus.CounterVec
+	getNextErrored *prometheus.CounterVec
 }
 
 func (s *S3) Export(ctx context.Context, prefix, filename string, r io.Reader) (newFilename string, err error) {
@@ -69,6 +97,11 @@ func (s *S3) Export(ctx context.Context, prefix, filename string, r io.Reader) (
 	}
 
 	if _, err = s.s3.PutObjectWithContext(ctx, input); err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			s.exportsErrored.With(prometheus.Labels{"aws_error": aerr.Code()}).Inc()
+		} else {
+			s.exportsErrored.With(prometheus.Labels{"aws_error": "ErrorForGetAWSErrorCode"}).Inc()
+		}
 		return
 	}
 
@@ -86,6 +119,11 @@ func (s *S3) Import(ctx context.Context, prefix, filename string, w io.Writer) (
 
 	var out *s3.GetObjectOutput
 	if out, err = s.s3.GetObjectWithContext(ctx, &getInput); err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			s.exportsErrored.With(prometheus.Labels{"aws_error": aerr.Code()}).Inc()
+		} else {
+			s.exportsErrored.With(prometheus.Labels{"aws_error": "ErrorForGetAWSErrorCode"}).Inc()
+		}
 		return
 	}
 	defer out.Body.Close()
@@ -100,6 +138,11 @@ func (s *S3) Get(ctx context.Context, prefix, filename string, fn func(r io.Read
 	filepath := path.Join(prefix, filename)
 	input := newGetInputObject(s.o.Bucket, filepath)
 	if out, err = s.s3.GetObjectWithContext(ctx, input); err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			s.exportsErrored.With(prometheus.Labels{"aws_error": aerr.Code()}).Inc()
+		} else {
+			s.exportsErrored.With(prometheus.Labels{"aws_error": "ErrorForGetAWSErrorCode"}).Inc()
+		}
 		return handleError(err)
 	}
 	defer out.Body.Close()
@@ -119,6 +162,11 @@ func (s *S3) GetNext(ctx context.Context, prefix, lastFilename string) (nextKey 
 
 	var out *s3.ListObjectsV2Output
 	if out, err = s.s3.ListObjectsV2WithContext(ctx, &input); err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			s.exportsErrored.With(prometheus.Labels{"aws_error": aerr.Code()}).Inc()
+		} else {
+			s.exportsErrored.With(prometheus.Labels{"aws_error": "ErrorForGetAWSErrorCode"}).Inc()
+		}
 		return
 	}
 
