@@ -26,6 +26,13 @@ const (
 
 var _ kiroku.Source = &S3{}
 
+func getAwsErrorCode(err error) string {
+	if aerr, ok := err.(awserr.Error); ok {
+		return aerr.Code()
+	}
+	return "ErrorForGetAWSErrorCode"
+}
+
 func New(o Options) (sp *S3, err error) {
 	var sess *session.Session
 	cfg := o.makeConfig()
@@ -97,11 +104,7 @@ func (s *S3) Export(ctx context.Context, prefix, filename string, r io.Reader) (
 	}
 
 	if _, err = s.s3.PutObjectWithContext(ctx, input); err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			s.exportsErrored.With(prometheus.Labels{"aws_error": aerr.Code()}).Inc()
-		} else {
-			s.exportsErrored.With(prometheus.Labels{"aws_error": "ErrorForGetAWSErrorCode"}).Inc()
-		}
+		s.exportsErrored.With(prometheus.Labels{"aws_error": getAwsErrorCode(err)}).Inc()
 		return
 	}
 
@@ -119,11 +122,7 @@ func (s *S3) Import(ctx context.Context, prefix, filename string, w io.Writer) (
 
 	var out *s3.GetObjectOutput
 	if out, err = s.s3.GetObjectWithContext(ctx, &getInput); err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			s.exportsErrored.With(prometheus.Labels{"aws_error": aerr.Code()}).Inc()
-		} else {
-			s.exportsErrored.With(prometheus.Labels{"aws_error": "ErrorForGetAWSErrorCode"}).Inc()
-		}
+		s.importsErrored.With(prometheus.Labels{"aws_error": getAwsErrorCode(err)}).Inc()
 		return
 	}
 	defer out.Body.Close()
@@ -138,11 +137,7 @@ func (s *S3) Get(ctx context.Context, prefix, filename string, fn func(r io.Read
 	filepath := path.Join(prefix, filename)
 	input := newGetInputObject(s.o.Bucket, filepath)
 	if out, err = s.s3.GetObjectWithContext(ctx, input); err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			s.exportsErrored.With(prometheus.Labels{"aws_error": aerr.Code()}).Inc()
-		} else {
-			s.exportsErrored.With(prometheus.Labels{"aws_error": "ErrorForGetAWSErrorCode"}).Inc()
-		}
+		s.getErrored.With(prometheus.Labels{"aws_error": getAwsErrorCode(err)}).Inc()
 		return handleError(err)
 	}
 	defer out.Body.Close()
@@ -162,11 +157,7 @@ func (s *S3) GetNext(ctx context.Context, prefix, lastFilename string) (nextKey 
 
 	var out *s3.ListObjectsV2Output
 	if out, err = s.s3.ListObjectsV2WithContext(ctx, &input); err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			s.exportsErrored.With(prometheus.Labels{"aws_error": aerr.Code()}).Inc()
-		} else {
-			s.exportsErrored.With(prometheus.Labels{"aws_error": "ErrorForGetAWSErrorCode"}).Inc()
-		}
+		s.getNextErrored.With(prometheus.Labels{"aws_error": getAwsErrorCode(err)}).Inc()
 		return
 	}
 
