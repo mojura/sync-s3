@@ -22,6 +22,7 @@ func TestNew(t *testing.T) {
 	if s, err = testInit(); err != nil {
 		t.Fatal(err)
 	}
+
 	defer testClose(t, s)
 
 }
@@ -31,10 +32,8 @@ func TestS3_Export(t *testing.T) {
 		err error
 	)
 
-	//if s, err = testInit(); err != nil {
-	//	t.Fatal(err)
-	//}
 	defer testClose(t, s)
+	s.createBucket()
 
 	var gotKey string
 	if gotKey, err = s.Export(
@@ -55,6 +54,9 @@ func TestExportImport(t *testing.T) {
 	var (
 		err error
 	)
+
+	defer testClose(t, s)
+	s.createBucket()
 
 	type testcase struct {
 		prefix string
@@ -84,12 +86,6 @@ func TestExportImport(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll("./test_data")
-
-	//	if s, err = testInit(); err != nil {
-	//		t.Fatal(err)
-	//}
-
-	defer func() { _ = s.deleteBucket() }()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -143,7 +139,7 @@ func testInit() (s *S3, err error) {
 }
 
 func testClose(t *testing.T, s *S3) {
-	//if err := s.deleteBucket(); err != nil {
-	//	t.Fatalf("Error encountered while deleting: %v\n", err)
-	//}
+	if err := s.deleteBucket(); err != nil {
+		t.Fatalf("Error encountered while deleting: %v\n", err)
+	}
 }

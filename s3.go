@@ -71,6 +71,11 @@ func New(o Options) (sp *S3, err error) {
 		Help: "The number of get next events with errors (https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#RESTErrorResponses)",
 	}, []string{"aws_error"})
 
+	s.getNextListErrored = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "mojura_sync_s3_get_nextlist_error_total",
+		Help: "The number of get next events with errors (https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#RESTErrorResponses)",
+	}, []string{"aws_error"})
+
 	sp = &s
 	return
 }
@@ -81,10 +86,11 @@ type S3 struct {
 
 	sema semaphore
 
-	exportsErrored *prometheus.CounterVec
-	importsErrored *prometheus.CounterVec
-	getErrored     *prometheus.CounterVec
-	getNextErrored *prometheus.CounterVec
+	exportsErrored     *prometheus.CounterVec
+	importsErrored     *prometheus.CounterVec
+	getErrored         *prometheus.CounterVec
+	getNextErrored     *prometheus.CounterVec
+	getNextListErrored *prometheus.CounterVec
 }
 
 func (s *S3) Export(ctx context.Context, prefix, filename string, r io.Reader) (newFilename string, err error) {
@@ -182,7 +188,7 @@ func (s *S3) GetNextList(ctx context.Context, prefix, lastFilename string, maxke
 
 	var out *s3.ListObjectsV2Output
 	if out, err = s.s3.ListObjectsV2WithContext(ctx, &input); err != nil {
-		s.getNextErrored.With(prometheus.Labels{"aws_error": getAwsErrorCode(err)}).Inc()
+		s.getNextListErrored.With(prometheus.Labels{"aws_error": getAwsErrorCode(err)}).Inc()
 		return
 	}
 
@@ -191,10 +197,9 @@ func (s *S3) GetNextList(ctx context.Context, prefix, lastFilename string, maxke
 		return
 	}
 
-	nextKeys = make([]string, len(out.Contents))
-
-	for k, v := range out.Contents {
-		nextKeys[k] = path.Base(*v.Key)
+	nextKeys = make([]string, 0, len(out.Contents))
+	for _, v := range out.Contents {
+		nextKeys = append(nextKeys, path.Base(*v.Key))
 	}
 
 	return
