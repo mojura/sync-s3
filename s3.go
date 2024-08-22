@@ -170,6 +170,36 @@ func (s *S3) GetNext(ctx context.Context, prefix, lastFilename string) (nextKey 
 	return
 }
 
+func (s *S3) GetNextList(ctx context.Context, prefix, lastFilename string, maxkeys int64) (nextKeys []string, err error) {
+	s.sema.Use()
+	startAfter := path.Join(prefix, lastFilename)
+	input := s3.ListObjectsV2Input{
+		Bucket:     aws.String(s.o.Bucket),
+		Prefix:     aws.String(prefix + "/"),
+		StartAfter: aws.String(startAfter),
+		MaxKeys:    aws.Int64(maxkeys),
+	}
+
+	var out *s3.ListObjectsV2Output
+	if out, err = s.s3.ListObjectsV2WithContext(ctx, &input); err != nil {
+		s.getNextErrored.With(prometheus.Labels{"aws_error": getAwsErrorCode(err)}).Inc()
+		return
+	}
+
+	if len(out.Contents) == 0 {
+		err = io.EOF
+		return
+	}
+
+	nextKeys = make([]string, len(out.Contents))
+
+	for k, v := range out.Contents {
+		nextKeys[k] = path.Base(*v.Key)
+	}
+
+	return
+}
+
 func (s *S3) createBucket() (err error) {
 	if s.o.AvoidBucketCreation {
 		return

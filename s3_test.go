@@ -11,11 +11,11 @@ import (
 var (
 	testKey    = os.Getenv("S3_KEY")
 	testSecret = os.Getenv("S3_SECRET")
+	s          *S3
 )
 
 func TestNew(t *testing.T) {
 	var (
-		s   *S3
 		err error
 	)
 
@@ -28,13 +28,12 @@ func TestNew(t *testing.T) {
 
 func TestS3_Export(t *testing.T) {
 	var (
-		s   *S3
 		err error
 	)
 
-	if s, err = testInit(); err != nil {
-		t.Fatal(err)
-	}
+	//if s, err = testInit(); err != nil {
+	//	t.Fatal(err)
+	//}
 	defer testClose(t, s)
 
 	var gotKey string
@@ -54,7 +53,6 @@ func TestS3_Export(t *testing.T) {
 
 func TestExportImport(t *testing.T) {
 	var (
-		s   *S3
 		err error
 	)
 
@@ -66,17 +64,17 @@ func TestExportImport(t *testing.T) {
 
 	tcs := []testcase{
 		{
-			prefix: "testing",
+			prefix: "testingExportImport",
 			key:    "helloWorld_0",
 			value:  "0_value",
 		},
 		{
-			prefix: "testing",
+			prefix: "testingExportImport",
 			key:    "helloWorld_1",
 			value:  "1_value",
 		},
 		{
-			prefix: "testing",
+			prefix: "testingExportImport",
 			key:    "helloWorld_2",
 			value:  "2_value",
 		},
@@ -87,9 +85,10 @@ func TestExportImport(t *testing.T) {
 	}
 	defer os.RemoveAll("./test_data")
 
-	if s, err = testInit(); err != nil {
-		t.Fatal(err)
-	}
+	//	if s, err = testInit(); err != nil {
+	//		t.Fatal(err)
+	//}
+
 	defer func() { _ = s.deleteBucket() }()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -109,7 +108,7 @@ func TestExportImport(t *testing.T) {
 
 	var nextKey string
 	for i, tc := range tcs {
-		if nextKey, err = s.GetNext(ctx, "", nextKey); err != nil {
+		if nextKey, err = s.GetNext(ctx, tc.prefix, nextKey); err != nil {
 			t.Fatalf("error during GetNext #%d: %v", i, err)
 		}
 
@@ -121,19 +120,30 @@ func TestExportImport(t *testing.T) {
 	if _, err = s.GetNext(ctx, "", nextKey); err != io.EOF {
 		t.Fatalf("invalid error, expected <%v> and received <%v>", io.EOF, err)
 	}
+
+	var nextList []string
+	if nextList, err = s.GetNextList(ctx, tcs[0].prefix, tcs[0].key, int64(len(tcs))); err != nil {
+		t.Fatalf("error during GetNextList #%v: %v", tcs[0].key, err)
+	}
+
+	if len(nextList) != len(tcs)-1 {
+		t.Fatalf("error during GetNextList: got wrong size")
+	}
 }
 
 func testInit() (s *S3, err error) {
 	var o Options
-	o.Bucket = "mojura"
+	o.Bucket = "mojura-sync-s3dev"
 	o.Key = testKey
 	o.Secret = testSecret
-	o.Region = "us-west-1"
+	o.Region = "us-east-1"
+	//o.AvoidBucketCreation = true
+	o.Endpoint = "https://nyc3.digitaloceanspaces.com"
 	return New(o)
 }
 
 func testClose(t *testing.T, s *S3) {
-	if err := s.deleteBucket(); err != nil {
-		t.Fatalf("Error encountered while deleting: %v\n", err)
-	}
+	//if err := s.deleteBucket(); err != nil {
+	//	t.Fatalf("Error encountered while deleting: %v\n", err)
+	//}
 }
