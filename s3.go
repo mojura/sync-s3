@@ -205,6 +205,23 @@ func (s *S3) GetNextList(ctx context.Context, prefix, lastFilename string, maxke
 	return
 }
 
+func (s *S3) GetHead(ctx context.Context, prefix, filename string) (info kiroku.Info, err error) {
+	s.sema.Use()
+	filepath := path.Join(prefix, filename)
+	input := newHeadObjectInput(s.o.Bucket, filepath)
+	var head *s3.HeadObjectOutput
+	if head, err = s.s3.HeadObjectWithContext(ctx, input); err != nil {
+		err = handleError(err)
+		return
+	}
+
+	info.Key = filename
+	info.Size = getPtrValue(head.ContentLength)
+	info.Hash = getPtrValue(head.ETag)
+	info.LastModified = getPtrValue(head.LastModified).Unix()
+	return
+}
+
 func (s *S3) createBucket() (err error) {
 	if s.o.AvoidBucketCreation {
 		return
