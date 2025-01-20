@@ -44,3 +44,11 @@ func handleError(err error) error {
 		return errors.New(msg)
 	}
 }
+
+func getPtrValue[T any](in *T) (out T) {
+	if in == nil {
+		return
+	}
+
+	return *in
+}
