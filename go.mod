@@ -7,7 +7,7 @@ toolchain go1.23.0
 require (
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/hatchify/errors v0.4.82
-	github.com/mojura/kiroku v0.15.0
+	github.com/mojura/kiroku v0.16.0
 	github.com/prometheus/client_golang v1.20.5
 )
 

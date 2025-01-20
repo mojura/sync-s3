@@ -205,7 +205,7 @@ func (s *S3) GetNextList(ctx context.Context, prefix, lastFilename string, maxke
 	return
 }
 
-func (s *S3) GetHead(ctx context.Context, prefix, filename string) (info kiroku.Info, err error) {
+func (s *S3) GetInfo(ctx context.Context, prefix, filename string) (info kiroku.Info, err error) {
 	s.sema.Use()
 	filepath := path.Join(prefix, filename)
 	input := newHeadObjectInput(s.o.Bucket, filepath)

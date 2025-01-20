@@ -21,8 +21,8 @@ github.com/klauspost/compress v1.17.9 h1:6KIumPrER1LHsvBVuDa0r5xaG0Es51mhhB9BQB2
 github.com/klauspost/compress v1.17.9/go.mod h1:Di0epgTjJY877eYKx5yC51cX2A2Vl2ibi7bDH9ttBbw=
 github.com/mojura/enkodo v0.5.7 h1:g+vvhX13j5ayhcLdzqr0fAB6tUVfhi8vgWX4tnrY/pk=
 github.com/mojura/enkodo v0.5.7/go.mod h1:9/1bBkNTRhwLPSFAo0uG1a+numnsZMxNIzLdWxlFl+g=
-github.com/mojura/kiroku v0.15.0 h1:43krMLjhcWSObJloYu4e+Dz/83BttRYwp9IgZUlnInY=
-github.com/mojura/kiroku v0.15.0/go.mod h1:5eEZJhOV6uFRgNUFB+vqds3Yem+pO70w5yrVWy00T1w=
+github.com/mojura/kiroku v0.16.0 h1:K9gxHYr6heScvrhAaJyD01EwYTChcYZ+Loama6KE1CI=
+github.com/mojura/kiroku v0.16.0/go.mod h1:5eEZJhOV6uFRgNUFB+vqds3Yem+pO70w5yrVWy00T1w=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
