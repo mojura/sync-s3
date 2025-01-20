@@ -26,6 +26,13 @@ func newGetInputObject(bucket, filename string) *s3.GetObjectInput {
 	return &input
 }
 
+func newHeadObjectInput(bucket, filename string) *s3.HeadObjectInput {
+	var input s3.HeadObjectInput
+	input.Bucket = aws.String(bucket)
+	input.Key = aws.String(filename)
+	return &input
+}
+
 func handleError(err error) error {
 	msg := getErrorFirstLine(err)
 	code := getErrorCode(msg)
