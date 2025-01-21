@@ -217,7 +217,7 @@ func (s *S3) GetInfo(ctx context.Context, prefix, filename string) (info kiroku.
 
 	info.Key = filename
 	info.Size = getPtrValue(head.ContentLength)
-	info.Hash = getPtrValue(head.ETag)
+	info.Hash = strings.Trim(getPtrValue(head.ETag), `"`)
 	info.LastModified = getPtrValue(head.LastModified).Unix()
 	return
 }
