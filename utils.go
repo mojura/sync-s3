@@ -6,7 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/hatchify/errors"
+	"github.com/gdbu/errors"
 )
 
 func getErrorFirstLine(err error) (msg string) {
